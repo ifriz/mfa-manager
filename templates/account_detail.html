@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}{{ account.account_name }} - MFA Manager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-shield-alt me-2 text-primary"></i>{{ account.account_name }}</h1>
+            <div>
+                <a href="{{ url_for('edit_account', account_id=account.id) }}" class="btn btn-warning">
+                    <i class="fas fa-edit me-1"></i>Edit
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- TOTP Code Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-key me-2"></i>Current TOTP Code
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="totp-code" 
+                             data-account-id="{{ account.id }}" 
+                             onclick="copyToClipboard('{{ account.totp_code }}')"
+                             title="Click to copy">
+                            {{ account.totp_code }}
+                        </div>
+                        <div class="remaining-time 
+                                    {% if account.remaining_time <= 10 %}critical
+                                    {% elif account.remaining_time <= 15 %}warning{% endif %}" 
+                             data-account-id="{{ account.id }}">
+                            <i class="fas fa-clock me-1"></i>
+                            Expires in <span class="time-value">{{ account.remaining_time }}</span>s
+                        </div>
+                        <button class="btn btn-outline-primary btn-sm mt-3" 
+                                onclick="copyToClipboard('{{ account.totp_code }}')">
+                            <i class="fas fa-copy me-1"></i>Copy Code
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QR Code Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-qrcode me-2"></i>QR Code
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ account.qr_code_image }}" alt="QR Code" class="img-fluid mb-3" style="max-width: 200px;">
+                        <p class="small text-muted">
+                            Scan this QR code with your authenticator app to add this account.
+                        </p>
+                        <button class="btn btn-outline-info btn-sm" onclick="copyToClipboard('{{ account.qr_code_url }}')">
+                            <i class="fas fa-link me-1"></i>Copy Setup URL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Details Card -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Account Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-4">Account Name:</dt>
+                            <dd class="col-sm-8">{{ account.account_name }}</dd>
+                            
+                            <dt class="col-sm-4">Issuer:</dt>
+                            <dd class="col-sm-8">{{ account.issuer }}</dd>
+                            
+                            <dt class="col-sm-4">Algorithm:</dt>
+                            <dd class="col-sm-8">SHA1 (TOTP)</dd>
+                            
+                            <dt class="col-sm-4">Digits:</dt>
+                            <dd class="col-sm-8">6</dd>
+                            
+                            <dt class="col-sm-4">Period:</dt>
+                            <dd class="col-sm-8">30 seconds</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Security Note:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Keep your secret key secure</li>
+                                <li>Don't share TOTP codes</li>
+                                <li>Use this app on a secure device</li>
+                                <li>Consider backing up your secrets safely</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Secret Key Section (Hidden by default) -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6><i class="fas fa-key me-1"></i>Secret Key</h6>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="toggleSecret()">
+                            <i class="fas fa-eye me-1" id="secretToggleIcon"></i>
+                            <span id="secretToggleText">Show Secret</span>
+                        </button>
+                    </div>
+                    <div class="input-group mt-2">
+                        <input type="password" class="form-control font-monospace" 
+                               id="secretKey" value="{{ account.secret }}" readonly>
+                        <button class="btn btn-outline-secondary" type="button" 
+                                onclick="copyToClipboard('{{ account.secret }}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">
+                        Keep this secret safe. Anyone with this key can generate your TOTP codes.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Card -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">Account Actions</h6>
+                        <small class="text-muted">Manage this MFA account</small>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('edit_account', account_id=account.id) }}" class="btn btn-warning me-2">
+                            <i class="fas fa-edit me-1"></i>Edit Account
+                        </a>
+                        <form method="POST" action="{{ url_for('delete_account', account_id=account.id) }}" 
+                              style="display: inline;" 
+                              onsubmit="return confirm('Are you sure you want to delete {{ account.account_name }}? This action cannot be undone!')">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-1"></i>Delete Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh TOTP code
+function refreshCode() {
+    fetch(`/api/code/{{ account.id }}`)
+        .then(response => response.json())
+        .then(data => {
+            const codeElement = document.querySelector(`[data-account-id="${data.id}"].totp-code`);
+            const timeElement = document.querySelector(`[data-account-id="${data.id}"].remaining-time`);
+            
+            if (codeElement && timeElement) {
+                codeElement.textContent = data.totp_code;
+                codeElement.onclick = () => copyToClipboard(data.totp_code);
+                
+                const timeValueElement = timeElement.querySelector('.time-value');
+                timeValueElement.textContent = data.remaining_time;
+                
+                // Update time warning classes
+                timeElement.classList.remove('warning', 'critical');
+                if (data.remaining_time <= 10) {
+                    timeElement.classList.add('critical');
+                } else if (data.remaining_time <= 15) {
+                    timeElement.classList.add('warning');
+                }
+            }
+        })
+        .catch(error => console.error('Error refreshing code:', error));
+}
+
+// Toggle secret visibility
+function toggleSecret() {
+    const secretInput = document.getElementById('secretKey');
+    const toggleIcon = document.getElementById('secretToggleIcon');
+    const toggleText = document.getElementById('secretToggleText');
+    
+    if (secretInput.type === 'password') {
+        secretInput.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash me-1';
+        toggleText.textContent = 'Hide Secret';
+    } else {
+        secretInput.type = 'password';
+        toggleIcon.className = 'fas fa-eye me-1';
+        toggleText.textContent = 'Show Secret';
+    }
+}
+
+// Copy to clipboard function
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            fallbackCopyTextToClipboard(text);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
+
+// Fallback copy method
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "-1000px";
+    textArea.style.left = "-1000px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('Copied to clipboard!');
+        }
+    } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// Show toast notification
+function showToast(message) {
+    const toastHtml = `
+        <div class="toast align-items-center text-bg-success border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.createElement('div');
+    toastContainer.innerHTML = toastHtml;
+    document.body.appendChild(toastContainer);
+    
+    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
+    toast.show();
+    
+    toastContainer.querySelector('.toast').addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toastContainer);
+    });
+}
+
+// Refresh code every 2 seconds
+setInterval(refreshCode, 2000);
+</script>
+{% endblock %}

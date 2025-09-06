@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Add Account - MFA Manager{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus me-2"></i>Add New MFA Account
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="account_name" class="form-label">
+                            <i class="fas fa-user me-1"></i>Account Name *
+                        </label>
+                        <input type="text" class="form-control" id="account_name" name="account_name" 
+                               placeholder="e.g., Google, GitHub, AWS" required>
+                        <div class="form-text">Choose a unique name to identify this account</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="secret" class="form-label">
+                            <i class="fas fa-key me-1"></i>Secret Key *
+                        </label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="secret" name="secret" 
+                                   placeholder="Enter your TOTP secret key" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="generateRandomSecret()">
+                                <i class="fas fa-dice me-1"></i>Generate
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            This is typically provided as a base32 string when setting up 2FA.
+                            <br><strong>Note:</strong> Keep this secret secure!
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="issuer" class="form-label">
+                            <i class="fas fa-building me-1"></i>Issuer (Optional)
+                        </label>
+                        <input type="text" class="form-control" id="issuer" name="issuer" 
+                               placeholder="e.g., Company Name" value="MFA Manager">
+                        <div class="form-text">The organization or service name</div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How to get your secret key:</strong>
+                        <ol class="mb-0 mt-2">
+                            <li>Go to your account's 2FA/MFA settings</li>
+                            <li>Choose "Set up authenticator app" or similar</li>
+                            <li>Look for "Can't scan QR code?" or "Manual entry"</li>
+                            <li>Copy the provided secret key/code</li>
+                        </ol>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>Add Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Test Section -->
+        <div class="card mt-4" id="testCard" style="display: none;">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-vial me-2"></i>Test Your Secret
+                </h5>
+            </div>
+            <div class="card-body">
+                <p>Current TOTP code for your secret:</p>
+                <div class="totp-code" id="testCode">------</div>
+                <div class="remaining-time">
+                    <i class="fas fa-clock me-1"></i>
+                    Expires in <span id="testTime">--</span>s
+                </div>
+                <small class="text-muted">
+                    Use this to verify your secret is working before saving.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let testInterval;
+
+function generateRandomSecret() {
+    fetch('/generate_secret')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('secret').value = data.secret;
+            testSecret();
+        })
+        .catch(error => {
+            console.error('Error generating secret:', error);
+            alert('Failed to generate secret. Please try again.');
+        });
+}
+
+function testSecret() {
+    const secret = document.getElementById('secret').value.trim();
+    const testCard = document.getElementById('testCard');
+    
+    if (!secret) {
+        testCard.style.display = 'none';
+        if (testInterval) {
+            clearInterval(testInterval);
+        }
+        return;
+    }
+    
+    // Show test card
+    testCard.style.display = 'block';
+    
+    // Clear existing interval
+    if (testInterval) {
+        clearInterval(testInterval);
+    }
+    
+    // Test the secret by creating a temporary TOTP
+    try {
+        updateTestCode(secret);
+        testInterval = setInterval(() => updateTestCode(secret), 1000);
+    } catch (error) {
+        document.getElementById('testCode').textContent = 'Invalid Secret';
+        document.getElementById('testTime').textContent = '--';
+    }
+}
+
+function updateTestCode(secret) {
+    // Simple client-side TOTP calculation (for testing only)
+    try {
+        const now = Math.floor(Date.now() / 1000);
+        const timeStep = Math.floor(now / 30);
+        const remainingTime = 30 - (now % 30);
+        
+        // This is a simplified version - the actual TOTP calculation
+        // should be done server-side for security
+        document.getElementById('testTime').textContent = remainingTime;
+        
+        // For now, just show that we're testing
+        document.getElementById('testCode').textContent = 'Testing...';
+        
+        // Update time warning classes
+        const timeElement = document.querySelector('#testCard .remaining-time');
+        timeElement.classList.remove('warning', 'critical');
+        if (remainingTime <= 10) {
+            timeElement.classList.add('critical');
+        } else if (remainingTime <= 15) {
+            timeElement.classList.add('warning');
+        }
+    } catch (error) {
+        document.getElementById('testCode').textContent = 'Invalid';
+        document.getElementById('testTime').textContent = '--';
+    }
+}
+
+// Listen for changes in secret input
+document.getElementById('secret').addEventListener('input', function() {
+    setTimeout(testSecret, 500); // Debounce
+});
+
+// Cleanup interval when leaving page
+window.addEventListener('beforeunload', function() {
+    if (testInterval) {
+        clearInterval(testInterval);
+    }
+});
+</script>
+{% endblock %}

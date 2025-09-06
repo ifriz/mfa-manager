@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MFA Manager{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-shield-alt me-2 text-primary"></i>MFA Dashboard</h1>
+    <a href="{{ url_for('add_account') }}" class="btn btn-success">
+        <i class="fas fa-plus me-2"></i>Add New Account
+    </a>
+</div>
+
+{% if accounts %}
+    <div class="row">
+        {% for account in accounts %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card account-card h-100">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user me-1"></i>{{ account.account_name }}
+                        </h6>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('view_account', account_id=account.id) }}">
+                                        <i class="fas fa-eye me-2"></i>View Details
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('edit_account', account_id=account.id) }}">
+                                        <i class="fas fa-edit me-2"></i>Edit
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form method="POST" action="{{ url_for('delete_account', account_id=account.id) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Are you sure you want to delete {{ account.account_name }}?')">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="fas fa-trash me-2"></i>Delete
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="totp-code" 
+                             data-account-id="{{ account.id }}" 
+                             onclick="copyToClipboard('{{ account.totp_code }}')"
+                             title="Click to copy">
+                            {{ account.totp_code }}
+                        </div>
+                        <div class="remaining-time 
+                                    {% if account.remaining_time <= 10 %}critical
+                                    {% elif account.remaining_time <= 15 %}warning{% endif %}" 
+                             data-account-id="{{ account.id }}">
+                            <i class="fas fa-clock me-1"></i>
+                            Expires in <span class="time-value">{{ account.remaining_time }}</span>s
+                        </div>
+                        {% if account.issuer and account.issuer != 'MFA Manager' %}
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-building me-1"></i>{{ account.issuer }}
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <div class="alert alert-info mt-4">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Tip:</strong> Click on any TOTP code to copy it to your clipboard. Codes refresh automatically every 30 seconds.
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-shield-alt text-muted" style="font-size: 4rem;"></i>
+        <h3 class="mt-3 text-muted">No MFA Accounts Yet</h3>
+        <p class="text-muted">Get started by adding your first MFA account.</p>
+        <a href="{{ url_for('add_account') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-plus me-2"></i>Add Your First Account
+        </a>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh TOTP codes
+function refreshCodes() {
+    fetch('/api/codes')
+        .then(response => response.json())
+        .then(data => {
+            data.forEach(account => {
+                const codeElement = document.querySelector(`[data-account-id="${account.id}"].totp-code`);
+                const timeElement = document.querySelector(`[data-account-id="${account.id}"].remaining-time`);
+                
+                if (codeElement && timeElement) {
+                    codeElement.textContent = account.totp_code;
+                    codeElement.onclick = () => copyToClipboard(account.totp_code);
+                    
+                    const timeValueElement = timeElement.querySelector('.time-value');
+                    timeValueElement.textContent = account.remaining_time;
+                    
+                    // Update time warning classes
+                    timeElement.classList.remove('warning', 'critical');
+                    if (account.remaining_time <= 10) {
+                        timeElement.classList.add('critical');
+                    } else if (account.remaining_time <= 15) {
+                        timeElement.classList.add('warning');
+                    }
+                }
+            });
+        })
+        .catch(error => console.error('Error refreshing codes:', error));
+}
+
+// Copy to clipboard function
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('Code copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            fallbackCopyTextToClipboard(text);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
+
+// Fallback copy method for older browsers
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.top = "-1000px";
+    textArea.style.left = "-1000px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('Code copied to clipboard!');
+        }
+    } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+// Show toast notification
+function showToast(message) {
+    const toastHtml = `
+        <div class="toast align-items-center text-bg-success border-0" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check me-2"></i>${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    const toastContainer = document.createElement('div');
+    toastContainer.innerHTML = toastHtml;
+    document.body.appendChild(toastContainer);
+    
+    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
+    toast.show();
+    
+    // Remove toast element after it's hidden
+    toastContainer.querySelector('.toast').addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toastContainer);
+    });
+}
+
+// Refresh codes every 2 seconds
+setInterval(refreshCodes, 2000);
+
+// Initial refresh
+refreshCodes();
+</script>
+{% endblock %}

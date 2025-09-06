@@ -1,0 +1,32 @@
+services:
+  mfa-manager:
+    build: .
+    container_name: mfa-manager
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_PATH=/app/data/mfa_manager.db
+      - SECRET_KEY=${SECRET_KEY:-$(openssl rand -hex 32)}
+    volumes:
+      # Persist database data
+      - mfa_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - mfa_network
+
+volumes:
+  mfa_data:
+    driver: local
+    name: mfa-manager-data
+
+networks:
+  mfa_network:
+    driver: bridge
+    name: mfa-manager-network
