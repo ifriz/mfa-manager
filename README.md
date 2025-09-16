@@ -1,5 +1,9 @@
 # 🛡️ MFA Manager - TOTP Code Generator
 
+**Repository**: https://github.com/ifriz/mfa-manager
+
+Do you suffer from MFA fatigue?  Do you have to test a lot of stuff that requires MFA?  Checkout MFA Manager!
+
 A secure, self-hosted Flask web application for managing Multi-Factor Authentication (MFA) secrets and generating Time-based One-Time Password (TOTP) codes. Perfect for individuals and teams who want to maintain control over their MFA tokens.
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
@@ -38,14 +42,14 @@ A secure, self-hosted Flask web application for managing Multi-Factor Authentica
 
 **Docker (Recommended):**
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/ifriz/mfa-manager.git
 cd mfa-manager
 docker-compose up -d
 ```
 
 **Python/Pip:**
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/ifriz/mfa-manager.git
 cd mfa-manager
 pip install -r requirements.txt
 python run.py
@@ -67,7 +71,7 @@ The easiest way to run MFA Manager is using Docker with persistent data storage:
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/ifriz/mfa-manager.git
    cd mfa-manager
    ```
 
@@ -96,7 +100,7 @@ The easiest way to run MFA Manager is using Docker with persistent data storage:
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/ifriz/mfa-manager.git
    cd mfa-manager
    ```
 
