@@ -1,13 +1,13 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from models import db, MFAAccount
 import pyotp
 import os
-import secrets
+from config import get_secret_key, get_database_path
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+app.config['SECRET_KEY'] = get_secret_key()
 # Use environment variable for database path in Docker, fallback to current directory
-database_path = os.environ.get('DATABASE_PATH', 'mfa_manager.db')
+database_path = get_database_path()
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{database_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -29,7 +29,7 @@ def index():
             'remaining_time': account.get_remaining_time()
         })
     
-    return render_template('index.html', accounts=account_data)
+    return render_template('index.html', accounts=account_data, theme=session.get('theme', 'light'))
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_account():
@@ -41,7 +41,7 @@ def add_account():
         
         if not account_name or not secret:
             flash('Account name and secret are required!', 'error')
-            return render_template('add_account.html')
+            return render_template('add_account.html', theme=session.get('theme', 'light'))
         
         # Validate secret format
         try:
@@ -49,13 +49,13 @@ def add_account():
             pyotp.TOTP(secret).now()
         except Exception as e:
             flash(f'Invalid secret format: {str(e)}', 'error')
-            return render_template('add_account.html')
+            return render_template('add_account.html', theme=session.get('theme', 'light'))
         
         # Check if account name already exists
         existing = MFAAccount.query.filter_by(account_name=account_name).first()
         if existing:
             flash('Account name already exists!', 'error')
-            return render_template('add_account.html')
+            return render_template('add_account.html', theme=session.get('theme', 'light'))
         
         # Create new account
         new_account = MFAAccount(
@@ -73,7 +73,7 @@ def add_account():
             db.session.rollback()
             flash(f'Error adding account: {str(e)}', 'error')
     
-    return render_template('add_account.html')
+    return render_template('add_account.html', theme=session.get('theme', 'light'))
 
 @app.route('/generate_secret')
 def generate_secret():
@@ -97,7 +97,7 @@ def view_account(account_id):
         'qr_code_url': account.get_qr_code_url()
     }
     
-    return render_template('account_detail.html', account=account_data)
+    return render_template('account_detail.html', account=account_data, theme=session.get('theme', 'light'))
 
 @app.route('/delete/<int:account_id>', methods=['POST'])
 def delete_account(account_id):
@@ -127,21 +127,21 @@ def edit_account(account_id):
         
         if not new_account_name or not new_secret:
             flash('Account name and secret are required!', 'error')
-            return render_template('edit_account.html', account=account)
+            return render_template('edit_account.html', account=account, theme=session.get('theme', 'light'))
         
         # Validate secret format
         try:
             pyotp.TOTP(new_secret).now()
         except Exception as e:
             flash(f'Invalid secret format: {str(e)}', 'error')
-            return render_template('edit_account.html', account=account)
+            return render_template('edit_account.html', account=account, theme=session.get('theme', 'light'))
         
         # Check if new account name conflicts with existing (excluding current)
         if new_account_name != account.account_name:
             existing = MFAAccount.query.filter_by(account_name=new_account_name).first()
             if existing:
                 flash('Account name already exists!', 'error')
-                return render_template('edit_account.html', account=account)
+                return render_template('edit_account.html', account=account, theme=session.get('theme', 'light'))
         
         # Update account
         account.account_name = new_account_name
@@ -156,7 +156,7 @@ def edit_account(account_id):
             db.session.rollback()
             flash(f'Error updating account: {str(e)}', 'error')
     
-    return render_template('edit_account.html', account=account)
+    return render_template('edit_account.html', account=account, theme=session.get('theme', 'light'))
 
 @app.route('/api/codes')
 def get_all_codes():
@@ -186,19 +186,41 @@ def get_single_code(account_id):
         'remaining_time': account.get_remaining_time()
     })
 
+@app.route('/api/theme', methods=['POST'])
+def set_theme():
+    """API endpoint to set user theme preference"""
+    data = request.get_json()
+    theme = data.get('theme', 'light')
+    
+    if theme in ['light', 'dark']:
+        session['theme'] = theme
+        return jsonify({'status': 'success', 'theme': theme})
+    else:
+        return jsonify({'status': 'error', 'message': 'Invalid theme'}), 400
+
+@app.route('/api/theme', methods=['GET'])
+def get_theme():
+    """API endpoint to get user theme preference"""
+    return jsonify({'theme': session.get('theme', 'light')})
+
 @app.errorhandler(404)
 def not_found_error(error):
-    return render_template('404.html'), 404
+    return render_template('404.html', theme=session.get('theme', 'light')), 404
 
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
-    return render_template('500.html'), 500
+    return render_template('500.html', theme=session.get('theme', 'light')), 500
 
 if __name__ == '__main__':
+    from config import get_port, get_host, is_production
+    
     with app.app_context():
         db.create_all()
-    # In production/Docker, bind to all interfaces
-    host = '0.0.0.0' if os.environ.get('FLASK_ENV') == 'production' else '127.0.0.1'
-    debug = os.environ.get('FLASK_ENV') != 'production'
-    app.run(debug=debug, host=host, port=5000)
+    
+    # Get configuration from environment variables
+    host = get_host()
+    port = get_port()
+    debug = not is_production()
+    
+    app.run(debug=debug, host=host, port=port)

@@ -30,7 +30,7 @@ Choose your preferred deployment method:
    ```
 
 3. **Open in browser:**
-   Navigate to `http://localhost:5000`
+   Navigate to `http://localhost:4570`
 
 4. **Add your first MFA account:**
    - Click "Add New Account"
@@ -55,7 +55,7 @@ Choose your preferred deployment method:
    ```
 
 3. **Open in browser:**
-   Navigate to `http://127.0.0.1:5000`
+   Navigate to `http://127.0.0.1:4570`
 
 ## 🔑 Getting Your Secret Keys
 
@@ -124,18 +124,52 @@ cp .env.example .env
 ```
 
 Important settings:
+- `PORT`: Application port (default: 4570)
+- `HOST`: Bind address (auto-detected: 127.0.0.1 for dev, 0.0.0.0 for production)
 - `SECRET_KEY`: Generate with `python -c "import secrets; print(secrets.token_hex(32))"`
 - `FLASK_ENV`: Set to `production` for production deployments
 - `DATABASE_PATH`: Database location (Docker handles this automatically)
 
+Supported environment variables:
+- `PORT` or `FLASK_PORT`: Application port
+- `HOST` or `FLASK_HOST`: Bind address
+- `SECRET_KEY`: Flask secret key
+- `FLASK_ENV`: Environment mode (development/production)
+- `DATABASE_PATH`: Database file location
+
 ### Port Configuration
 
-To use a different port, edit `docker-compose.yml`:
+The application runs on port 4570 by default. You can easily change this using environment variables:
 
-```yaml
-ports:
-  - "8080:5000"  # Use port 8080 instead of 5000
+**Method 1: Environment Variable**
+```bash
+# Windows PowerShell
+$env:PORT="3000"
+docker-compose up -d
+
+# Linux/macOS
+PORT=3000 docker-compose up -d
 ```
+
+**Method 2: .env File**
+```bash
+# Copy and customize the example
+cp .env.example .env
+# Edit .env file: PORT=3000
+docker-compose up -d
+```
+
+**Method 3: Python/Pip**
+```bash
+# Set environment variable
+PORT=3000 python run.py
+
+# Or use .env file
+echo "PORT=3000" > .env
+python run.py
+```
+
+The system automatically handles both internal and external port mapping.
 
 ## 📚 Need Help?
 
