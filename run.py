@@ -6,6 +6,7 @@ A secure Flask application for managing MFA secrets and generating TOTP codes.
 
 import os
 from app import app, db
+from config import get_port, get_host, is_production, get_database_path
 
 def create_database():
     """Initialize the database with all tables"""
@@ -19,9 +20,13 @@ def run_app():
     print("\n" + "="*50)
     print("🛡️  MFA Manager - TOTP Code Generator")
     print("="*50)
-    host = '0.0.0.0' if os.environ.get('FLASK_ENV') == 'production' else '127.0.0.1'
-    db_path = os.environ.get('DATABASE_PATH', 'mfa_manager.db')
-    print(f"🌐 Server starting at: http://{host}:5000")
+    
+    # Get configuration from environment variables
+    host = get_host()
+    port = get_port()
+    db_path = get_database_path()
+    
+    print(f"🌐 Server starting at: http://{host}:{port}")
     print(f"📁 Database location: {os.path.abspath(db_path)}")
     print("="*50)
     print("🔒 Security Tips:")
@@ -36,19 +41,18 @@ def run_app():
     
     # Set configuration based on environment
     flask_env = os.environ.get('FLASK_ENV', 'development')
-    is_production = flask_env == 'production'
+    production_mode = is_production()
     
-    app.config['DEBUG'] = not is_production
+    app.config['DEBUG'] = not production_mode
     app.config['ENV'] = flask_env
     
     # Run the application
     try:
-        host = '0.0.0.0' if is_production else '127.0.0.1'
         app.run(
-            debug=not is_production,
+            debug=not production_mode,
             host=host,
-            port=5000,
-            use_reloader=not is_production
+            port=port,
+            use_reloader=not production_mode
         )
     except KeyboardInterrupt:
         print("\n👋 MFA Manager stopped by user")
