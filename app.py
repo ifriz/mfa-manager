@@ -186,6 +186,35 @@ def get_single_code(account_id):
         'remaining_time': account.get_remaining_time()
     })
 
+@app.route('/api/search')
+def search_accounts():
+    """API endpoint to search for accounts by name or issuer"""
+    query = request.args.get('q', '').strip()
+    
+    if not query:
+        # Return all accounts if no query provided
+        accounts = MFAAccount.query.all()
+    else:
+        # Search for accounts matching the query in account_name or issuer
+        accounts = MFAAccount.query.filter(
+            db.or_(
+                MFAAccount.account_name.ilike(f'%{query}%'),
+                MFAAccount.issuer.ilike(f'%{query}%')
+            )
+        ).all()
+    
+    results = []
+    for account in accounts:
+        results.append({
+            'id': account.id,
+            'account_name': account.account_name,
+            'issuer': account.issuer,
+            'totp_code': account.get_totp_code(),
+            'remaining_time': account.get_remaining_time()
+        })
+    
+    return jsonify(results)
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404
