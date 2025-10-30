@@ -55,7 +55,7 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Then open `http://localhost:5000` in your browser.
+Then open `http://localhost:4570` in your browser.
 
 ## 💿 Installation
 
@@ -81,7 +81,7 @@ The easiest way to run MFA Manager is using Docker with persistent data storage:
    ```
 
 3. **Access the application:**
-   Open `http://localhost:5000` in your browser
+   Open `http://localhost:4570` in your browser
 
 4. **View logs (optional):**
    ```bash
@@ -89,6 +89,30 @@ The easiest way to run MFA Manager is using Docker with persistent data storage:
    ```
 
 **Data Persistence:** Your MFA accounts are automatically saved in a Docker volume and will persist between container restarts.
+
+#### Port Configuration
+
+By default, the application runs on port 4570. You can customize this using environment variables:
+
+**Method 1: Environment Variable**
+```bash
+# Windows PowerShell
+$env:PORT="3000"
+docker-compose up -d
+
+# Linux/macOS
+PORT=3000 docker-compose up -d
+```
+
+**Method 2: .env File**
+```bash
+# Copy example and customize
+cp .env.example .env
+# Edit .env: PORT=3000
+docker-compose up -d
+```
+
+The Docker configuration automatically maps both external and internal ports to your specified port.
 
 ### Python/Pip
 
@@ -121,7 +145,25 @@ The easiest way to run MFA Manager is using Docker with persistent data storage:
    ```
 
 5. **Open your browser:**
-   Navigate to `http://127.0.0.1:5000`
+   Navigate to `http://127.0.0.1:4570`
+
+#### Port Configuration (Python/Pip)
+
+To run on a different port:
+
+```bash
+# Set port via environment variable
+PORT=3000 python run.py
+
+# Or create a .env file
+echo "PORT=3000" > .env
+python run.py
+```
+
+Supported environment variables:
+- `PORT` or `FLASK_PORT`: Application port (default: 4570)
+- `HOST` or `FLASK_HOST`: Bind address (auto-detected by default)
+- `FLASK_ENV`: Environment mode (development/production)
 
 ## 📱 Usage
 
@@ -203,6 +245,7 @@ The application provides REST API endpoints for integration:
 ```
 mfa-manager/
 ├── app.py              # Main Flask application
+├── config.py           # Configuration and environment variable handling
 ├── models.py           # Database models
 ├── run.py              # Application runner script
 ├── requirements.txt    # Python dependencies
@@ -226,14 +269,14 @@ mfa-manager/
 - **pyotp**: TOTP/HOTP library
 - **qrcode**: QR code generation
 - **Pillow**: Image processing for QR codes
-- **cryptography**: Cryptographic functions
+- **python-dotenv**: Environment variable and .env file support
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Invalid Secret Format**: Ensure the secret is a valid base32 string
-2. **Port Already in Use**: Change the port in `run.py` if 5000 is occupied
+2. **Port Already in Use**: Set the `PORT` environment variable if 4570 is occupied
 3. **Database Errors**: Delete `mfa_manager.db` to reset the database
 4. **Import Errors**: Ensure all dependencies are installed with `pip install -r requirements.txt`
 
@@ -242,7 +285,7 @@ mfa-manager/
 - Check the console output for error messages
 - Verify that all dependencies are properly installed
 - Ensure Python 3.7+ is being used
-- Check that no firewall is blocking port 5000
+- Check that no firewall is blocking port 4570 (or your configured port)
 
 ## License
 
