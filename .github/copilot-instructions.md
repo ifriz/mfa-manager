@@ -1,55 +1,61 @@
 # Copilot Instructions for MFA Manager
 
-## Project Overview
-- **MFA Manager** is a Flask web app for managing TOTP-based MFA secrets and generating codes. It is designed for local or team use, with a focus on security and ease of use.
-- Data is stored in a local SQLite database (`mfa_manager.db` by default), with Docker support for persistent storage.
-- The UI is built with Bootstrap and supports QR code generation, account management, and real-time TOTP updates.
+## Project Architecture
+- **MFA Manager** is a Flask web app for managing TOTP-based MFA secrets and generating codes, designed for local/team use with a focus on security and usability.
+- **Data Flow:**
+  - User interacts with Flask routes in `app.py` (UI and REST API under `/api/`)
+  - Account data is managed via SQLAlchemy models in `models.py` (notably `mfa_accounts`)
+  - TOTP secrets are stored in a local SQLite DB (`mfa_manager.db` by default, path configurable)
+  - UI is rendered with Jinja2 templates in `templates/` (all pages inherit from `base.html`)
+  - Static assets (CSS/JS) are in `static/`
+  - QR code generation and real-time TOTP updates are supported in the UI
 
 ## Key Files & Structure
-- `app.py`: Main Flask app, routes, and app setup
-- `models.py`: SQLAlchemy models (notably `mfa_accounts`)
-- `config.py`: Handles environment variables and config
-- `run.py`: Entrypoint for running the app
-- `templates/`: Jinja2 HTML templates for all UI pages
+- `app.py`: Main Flask app, all routes (UI/API), app setup, and business logic
+- `models.py`: SQLAlchemy models and DB logic
+- `config.py`: Loads environment variables and config (never hardcode secrets)
+- `run.py`: Entrypoint for running the app (calls Flask)
+- `templates/`: Jinja2 HTML templates (all pages extend `base.html`)
 - `static/`: Static assets (CSS, JS, images)
 - `requirements.txt`: Python dependencies
-- `docker-compose.yml`, `Dockerfile`: Containerization and orchestration
+- `docker-compose.yml`, `Dockerfile`: Containerization and persistent storage
 
 ## Developer Workflows
-- **Run locally:**
+- **Local run:**
   - `python -m venv venv && venv\Scripts\activate` (Windows)
   - `pip install -r requirements.txt`
-  - `python run.py`
-- **Run with Docker:**
+  - `python run.py` (Flask app, default port 4570)
+- **Docker run:**
   - `docker-compose up -d` (persistent data in Docker volume)
 - **Change port:**
-  - Set `PORT` or `FLASK_PORT` env var, or edit `.env` file
-- **Test:**
-  - (If present) Run `pytest` or `python -m unittest` (see `test_*.py` files)
-- **Debug:**
+  - Set `PORT` or `FLASK_PORT` env var, or edit `.env`
+- **Testing:**
+  - Run `pytest` or `python -m unittest` (see `test_*.py`)
+- **Debugging:**
   - Set `FLASK_ENV=development` for debug mode
   - Use `docker-compose logs -f mfa-manager` for container logs
 
 ## Project Conventions & Patterns
-- **Account data**: Managed via SQLAlchemy, all logic in `models.py` and `app.py`
-- **Secrets**: Never hardcode; always use environment variables for `SECRET_KEY` and DB path
-- **API**: REST endpoints under `/api/` (see README for details)
-- **UI**: All user-facing pages use `base.html` as a template root
-- **Port**: Defaults to 4570, but can be overridden
-- **Security**: Always recommend HTTPS in production, and strong `SECRET_KEY`
+- **Account data:** All DB logic in `models.py`, all Flask routes in `app.py`
+- **Secrets:** Always use env vars for `SECRET_KEY` and DB path (see `config.py`)
+- **API:** REST endpoints under `/api/` (e.g., `/api/codes`, `/api/code/<account_id>`, see `app.py`)
+- **UI:** All user-facing pages extend `base.html` (see `templates/`)
+- **Port:** Defaults to 4570, override via env var
+- **Security:** Recommend HTTPS in production, strong `SECRET_KEY`, never expose secrets in code/logs
 
 ## Integration & Extensibility
-- **API endpoints**: `/api/codes`, `/api/code/<account_id>` for TOTP integration
-- **Database**: Default is SQLite, but can be swapped via `DATABASE_URL` env var
-- **Docker**: Persistent data via `mfa-manager-data` volume at `/app/data`
+- **API endpoints:** `/api/codes`, `/api/code/<account_id>` for TOTP integration
+- **Database:** Default is SQLite, override with `DATABASE_URL` env var
+- **Docker:** Persistent data via `mfa-manager-data` volume at `/app/data`
 
-## Examples
-- To add a new page, create a template in `templates/`, add a route in `app.py`, and (if needed) update the model in `models.py`.
-- To change the database, set `DATABASE_URL` in the environment or `.env` file.
+## Examples & Patterns
+- To add a new page: create a template in `templates/`, add a route in `app.py`, update model in `models.py` if needed
+- To change DB backend: set `DATABASE_URL` in env or `.env`
+- To add API: add route under `/api/` in `app.py`
 
 ## References
-- See `README.md` for full setup, usage, and troubleshooting
-- See `DOCKER.md` for advanced Docker usage and backup/restore
+- See `README.md` for setup, usage, troubleshooting
+- See `DOCKER.md` for advanced Docker usage, backup/restore
 
 ---
-**Security Reminder:** This app manages sensitive secrets. Always use secure deployment practices and never expose secrets in code or logs.
+**Security Reminder:** This app manages sensitive secrets. Use secure deployment practices and never expose secrets in code or logs.
