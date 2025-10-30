@@ -3,17 +3,18 @@ services:
     build: .
     container_name: mfa-manager
     ports:
-      - "5000:5000"
+      - "${PORT:-4570}:${PORT:-4570}"
     environment:
       - FLASK_ENV=production
       - DATABASE_PATH=/app/data/mfa_manager.db
       - SECRET_KEY=${SECRET_KEY:-$(openssl rand -hex 32)}
+      - PORT=${PORT:-4570}
     volumes:
       # Persist database data
       - mfa_data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${PORT:-4570}')"]
       interval: 30s
       timeout: 10s
       retries: 3
