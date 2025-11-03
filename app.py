@@ -57,10 +57,11 @@ def add_account():
             flash('Account name already exists!', 'error')
             return render_template('add_account.html', theme=session.get('theme', 'light'))
         
-        # Create new account
+        # Create new account (encryption handled in model)
+        normalized_secret = secret.upper().replace(' ', '')
         new_account = MFAAccount(
             account_name=account_name,
-            secret=secret.upper().replace(' ', ''),  # Normalize secret
+            secret=normalized_secret,
             issuer=issuer
         )
         
