@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timezone
 import pyotp
 import qrcode
 import io
@@ -15,8 +15,8 @@ class MFAAccount(db.Model):
     account_name = db.Column(db.String(100), nullable=False, unique=True)
     secret = db.Column(db.String(100), nullable=False)
     issuer = db.Column(db.String(100), nullable=True, default='MFA Manager')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
     
     def __init__(self, account_name, secret, issuer=None):
         self.account_name = account_name
