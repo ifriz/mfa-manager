@@ -17,10 +17,31 @@
     </div>
 </div>
 
+<div class="mb-4">
+    <div class="input-group">
+        <span class="input-group-text"><i class="fas fa-search"></i></span>
+        <input type="text" 
+               id="searchInput" 
+               class="form-control" 
+               placeholder="Search accounts by name or issuer..."
+               autocomplete="off">
+        <button class="btn btn-outline-secondary" 
+                type="button" 
+                id="clearSearch" 
+                style="display: none;">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <small class="text-muted" id="searchResults"></small>
+</div>
+
 {% if accounts %}
-    <div class="row">
+    <div class="row" id="accountsContainer">
         {% for account in accounts %}
-            <div class="col-md-6 col-lg-4 mb-4">
+            <div class="col-md-6 col-lg-4 mb-4 account-item" 
+                 data-account-id="{{ account.id }}"
+                 data-account-name="{{ account.account_name.lower() }}"
+                 data-issuer="{{ account.issuer.lower() if account.issuer else '' }}">
                 <div class="card account-card h-100">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">
@@ -114,6 +135,75 @@
 
 {% block scripts %}
 <script>
+// Search functionality
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+const clearSearchBtn = document.getElementById('clearSearch');
+const searchResults = document.getElementById('searchResults');
+const accountsContainer = document.getElementById('accountsContainer');
+
+if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+        const query = e.target.value.trim();
+        
+        // Show/hide clear button
+        clearSearchBtn.style.display = query ? 'block' : 'none';
+        
+        // Debounce search
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch(query);
+        }, 300);
+    });
+    
+    clearSearchBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+        performSearch('');
+    });
+}
+
+function performSearch(query) {
+    const accountItems = document.querySelectorAll('.account-item');
+    
+    if (!query) {
+        // Show all accounts
+        accountItems.forEach(item => {
+            item.style.display = '';
+        });
+        searchResults.textContent = '';
+        return;
+    }
+    
+    // Client-side filtering for instant feedback
+    const lowerQuery = query.toLowerCase();
+    let visibleCount = 0;
+    
+    accountItems.forEach(item => {
+        const accountName = item.dataset.accountName || '';
+        const issuer = item.dataset.issuer || '';
+        
+        if (accountName.includes(lowerQuery) || issuer.includes(lowerQuery)) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Update search results count
+    if (visibleCount === 0) {
+        searchResults.textContent = 'No accounts found matching your search.';
+        searchResults.className = 'text-danger';
+    } else if (visibleCount === 1) {
+        searchResults.textContent = '1 account found';
+        searchResults.className = 'text-muted';
+    } else {
+        searchResults.textContent = `${visibleCount} accounts found`;
+        searchResults.className = 'text-muted';
+    }
+}
+
 // Auto-refresh TOTP codes
 function refreshCodes() {
     const showAll = {{ 'true' if show_all else 'false' }};
