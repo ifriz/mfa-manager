@@ -20,7 +20,7 @@ def create_database():
         except Exception as e:
             # Migration will be handled automatically by SQLAlchemy for new databases
             # This is just a safety check for existing databases
-            print(f"Note: Migration check completed (this is normal for new databases)")
+            print(f"Note: Migration check completed (this is normal for new databases): {str(e)}")
         print("✓ Database initialized successfully!")
 
 def run_app():
