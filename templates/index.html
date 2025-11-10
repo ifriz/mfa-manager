@@ -207,7 +207,7 @@ function performSearch(query) {
 // Auto-refresh TOTP codes
 function refreshCodes() {
     const showAll = {{ 'true' if show_all else 'false' }};
-    const url = showAll === 'true' ? '/api/codes?show_all=true' : '/api/codes';
+    const url = showAll ? '/api/codes?show_all=true' : '/api/codes';
     fetch(url)
         .then(response => response.json())
         .then(data => {
