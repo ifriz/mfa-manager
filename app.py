@@ -288,7 +288,7 @@ if __name__ == '__main__':
         db.create_all()
         # Run migration to add hidden column if it doesn't exist
         try:
-            from migrate_add_hidden_column import migrate
+            from migrations.migrate_add_hidden_column import migrate
             migrate()
         except Exception as e:
             # Migration will be handled automatically by SQLAlchemy if column doesn't exist
